@@ -1,0 +1,29 @@
+# OPCIONAL: não incluído no kustomization.yaml. Valide limiares e estratégia
+# de resposta antes de ativar. Alerts somente informam; não corrigem a falha.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kafka-operational-alerts-example
+  namespace: streaming-demo
+  labels:
+    app.kubernetes.io/part-of: kafka-enterprise-na-pratica
+spec:
+  groups:
+    - name: kafka-operational-demo
+      rules:
+        - alert: KafkaUnderReplicatedPartitions
+          expr: sum(kafka_server_replicamanager_underreplicatedpartitions{namespace="streaming-demo"}) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kafka com partições sub-replicadas"
+            description: "Investigue brokers, ISR, rede e discos. Exemplo educacional."
+        - alert: KafkaOfflinePartitions
+          expr: sum(kafka_controller_kafkacontroller_offlinepartitionscount{namespace="streaming-demo"}) > 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Kafka com partições offline"
+            description: "Verifique brokers e eleições de líderes. Exemplo educacional."

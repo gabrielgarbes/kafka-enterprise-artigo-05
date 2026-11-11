@@ -1,0 +1,22 @@
+flowchart LR
+    subgraph OCP["Red Hat OpenShift"]
+      subgraph K["Namespace streaming-demo"]
+        B["Brokers Kafka / KRaft"]
+        CT["Controllers KRaft"]
+        EX["Kafka Exporter"]
+        PM["PodMonitor"]
+        CM["ConfigMap JMX Exporter"]
+      end
+      P["Prometheus User Workload Monitoring"]
+      G["Grafana"]
+    end
+    CM -->|"metricsConfig"| B
+    CM -->|"metricsConfig"| CT
+    B -->|"/metrics :9404"| PM
+    CT -->|"/metrics :9404"| PM
+    EX -->|"consumer lag"| PM
+    PM -->|"scrape"| P
+    P -->|"PromQL"| G
+    style K fill:#152437,stroke:#70bbd7,color:#fff
+    style P fill:#23374c,stroke:#e95454,color:#fff
+    style G fill:#23374c,stroke:#e95454,color:#fff

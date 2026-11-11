@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-metrics
+  namespace: streaming-demo
+  labels:
+    app.kubernetes.io/part-of: kafka-enterprise-na-pratica
+    app.kubernetes.io/component: observability
+data:
+  kafka-metrics-config.yml: |
+    # Regras JMX Exporter para um conjunto enxuto de métricas operacionais.
+    # Os MBeans dependem da versão Kafka; valide as séries reais no Prometheus.
+    lowercaseOutputName: true
+    lowercaseOutputLabelNames: true
+    rules:
+      # Contadores de mensagens e bytes; regra por tópico antes do agregado.
+      - pattern: 'kafka.server<type=BrokerTopicMetrics, name=(MessagesIn|BytesIn|BytesOut)PerSec, topic=(.+)><>Count'
+        name: kafka_server_brokertopicmetrics_$1_total
+        type: COUNTER
+        labels:
+          topic: '$2'
+      - pattern: 'kafka.server<type=BrokerTopicMetrics, name=(MessagesIn|BytesIn|BytesOut)PerSec><>Count'
+        name: kafka_server_brokertopicmetrics_$1_total
+        type: COUNTER
+      # Estado das réplicas e dos brokers.
+      - pattern: 'kafka.server<type=ReplicaManager, name=(LeaderCount|PartitionCount|UnderReplicatedPartitions|UnderMinIsrPartitionCount|AtMinIsrPartitionCount)><>Value'
+        name: kafka_server_replicamanager_$1
+        type: GAUGE
+      # Estado do controller.
+      - pattern: 'kafka.controller<type=KafkaController, name=(ActiveControllerCount|OfflinePartitionsCount)><>Value'
+        name: kafka_controller_kafkacontroller_$1
+        type: GAUGE
+      # Ociosidade dos handlers: número mais baixo indica mais pressão no broker.
+      - pattern: 'kafka.server<type=KafkaRequestHandlerPool, name=RequestHandlerAvgIdlePercent><>MeanRate'
+        name: kafka_server_kafkarequesthandlerpool_requesthandleravgidle_percent
+        type: GAUGE
+      # KRaft: valores são exportados diretamente de MBeans raft-metrics.
+      - pattern: 'kafka.server<type=raft-metrics><>(.+-total|.+-max):'
+        name: kafka_server_raftmetrics_$1
+        type: COUNTER
+      - pattern: 'kafka.server<type=raft-metrics><>(current-state): (.+)'
+        name: kafka_server_raftmetrics_$1
+        value: 1
+        type: UNTYPED
+        labels:
+          state: '$2'
+      - pattern: 'kafka.server<type=raft-metrics><>(.+):'
+        name: kafka_server_raftmetrics_$1
+        type: GAUGE
+      # Latências e percentis podem ter MBeans variáveis entre versões;
+      # incluir regras específicas após validá-los no ambiente de destino.
